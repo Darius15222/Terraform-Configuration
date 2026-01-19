@@ -1,0 +1,40 @@
+resource "aws_instance" "pfsense" {
+  ami           = data.aws_ami.pfsense.id
+  instance_type = "t3.small"
+  key_name      = aws_key_pair.generated_key.key_name
+  user_data     = file("${path.module}/pfsense-userdata.sh")
+
+  network_interface {
+    network_interface_id = aws_network_interface.wan_nic.id
+    device_index         = 0
+  }
+  network_interface {
+    network_interface_id = aws_network_interface.lan_nic.id
+    device_index         = 1
+  }
+  network_interface {
+    network_interface_id = aws_network_interface.opt_nic.id
+    device_index         = 2
+  }
+  tags = { Name = "pfsense-firewall" }
+}
+
+resource "aws_instance" "kali" {
+  ami                    = data.aws_ami.kali.id
+  instance_type          = "t3.small"
+  key_name               = aws_key_pair.generated_key.key_name
+  subnet_id              = aws_subnet.kali_subnet.id
+  vpc_security_group_ids = [aws_security_group.lab_sg.id]
+  private_ip             = "10.0.2.100"
+  tags = { Name = "kali-linux" }
+}
+
+resource "aws_instance" "ubuntu" {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = "t3.micro"
+  key_name               = aws_key_pair.generated_key.key_name
+  subnet_id              = aws_subnet.ubuntu_subnet.id
+  vpc_security_group_ids = [aws_security_group.lab_sg.id]
+  private_ip             = "10.0.3.100"
+  tags = { Name = "ubuntu-minimal-server" }
+}
