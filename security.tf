@@ -28,3 +28,12 @@ resource "aws_security_group" "lab_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.main.id
+
+  tags = { 
+    Name = "default-deny-all"
+    Note = "Default SG - intentionally locked down"
+  }
+}

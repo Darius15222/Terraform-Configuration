@@ -1,0 +1,31 @@
+# ============================================================
+# EXAMPLE TERRAFORM VARIABLES FILE
+# ============================================================
+# Copy this file to 'terraform.tfvars' and update with your values.
+# The terraform.tfvars file is gitignored for security.
+#
+# Usage: cp terraform.tfvars.example terraform.tfvars
+# ============================================================
+
+# REQUIRED: Your current public IP address (find it at https://whatismyip.com)
+# Format: xxx.xxx.xxx.xxx/32 (the /32 means "only this single IP")
+admin_cidr = "1.2.3.4/32"
+
+# OPTIONAL: Override default values below as needed
+# aws_region = "eu-central-1"
+# vpc_cidr   = "10.0.0.0/16"
+
+# subnet_cidrs = {
+#   wan    = "10.0.1.0/24"
+#   kali   = "10.0.2.0/24"
+#   ubuntu = "10.0.3.0/24"
+# }
+
+# instance_types = {
+#   pfsense = "t3.small"
+#   kali    = "t3.small"
+#   ubuntu  = "t3.micro"
+# }
+
+# project_name = "CyberLab"
+# environment  = "Dev"

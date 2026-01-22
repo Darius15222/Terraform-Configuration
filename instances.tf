@@ -4,6 +4,18 @@ resource "aws_instance" "pfsense" {
   key_name      = aws_key_pair.generated_key.key_name
   user_data     = file("${path.module}/pfsense-userdata.sh")
 
+  ebs_optimized = true
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+  }
+
+  root_block_device {
+    encrypted = true
+  }
+
   network_interface {
     network_interface_id = aws_network_interface.wan_nic.id
     device_index         = 0
@@ -16,6 +28,7 @@ resource "aws_instance" "pfsense" {
     network_interface_id = aws_network_interface.opt_nic.id
     device_index         = 2
   }
+  
   tags = { Name = "pfsense-firewall" }
 }
 
@@ -26,6 +39,19 @@ resource "aws_instance" "kali" {
   subnet_id              = aws_subnet.kali_subnet.id
   vpc_security_group_ids = [aws_security_group.lab_sg.id]
   private_ip             = "10.0.2.100"
+
+  ebs_optimized = true
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+  }
+
+  root_block_device {
+    encrypted = true
+  }
+
   tags = { Name = "kali-linux" }
 }
 
@@ -36,5 +62,18 @@ resource "aws_instance" "ubuntu" {
   subnet_id              = aws_subnet.ubuntu_subnet.id
   vpc_security_group_ids = [aws_security_group.lab_sg.id]
   private_ip             = "10.0.3.100"
+
+  ebs_optimized = true
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+  }
+
+  root_block_device {
+    encrypted = true
+  }
+
   tags = { Name = "ubuntu-minimal-server" }
 }
