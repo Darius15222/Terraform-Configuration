@@ -1,8 +1,7 @@
 resource "aws_instance" "pfsense" {
   ami           = data.aws_ami.pfsense.id
-  instance_type = "t3.small"
+  instance_type = var.instance_types["pfsense"]
   key_name      = aws_key_pair.generated_key.key_name
-  user_data     = file("${path.module}/pfsense-userdata.sh")
 
   ebs_optimized = true
 
@@ -34,11 +33,11 @@ resource "aws_instance" "pfsense" {
 
 resource "aws_instance" "kali" {
   ami                    = data.aws_ami.kali.id
-  instance_type          = "t3.small"
+  instance_type          = var.instance_types["kali"]
   key_name               = aws_key_pair.generated_key.key_name
   subnet_id              = aws_subnet.kali_subnet.id
   vpc_security_group_ids = [aws_security_group.lab_sg.id]
-  private_ip             = "10.0.2.100"
+  private_ip             = local.kali_ip
 
   ebs_optimized = true
 
@@ -57,11 +56,11 @@ resource "aws_instance" "kali" {
 
 resource "aws_instance" "ubuntu" {
   ami                    = data.aws_ami.ubuntu.id
-  instance_type          = "t3.micro"
+  instance_type          = var.instance_types["ubuntu"]
   key_name               = aws_key_pair.generated_key.key_name
   subnet_id              = aws_subnet.ubuntu_subnet.id
   vpc_security_group_ids = [aws_security_group.lab_sg.id]
-  private_ip             = "10.0.3.100"
+  private_ip             = local.ubuntu_ip
 
   ebs_optimized = true
 
