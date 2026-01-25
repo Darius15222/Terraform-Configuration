@@ -28,7 +28,9 @@ resource "aws_instance" "pfsense" {
     device_index         = 2
   }
   
-  tags = { Name = "pfsense-firewall" }
+  tags = merge(local.common_tags, {
+    Name = "pfsense-firewall"
+  })
 }
 
 resource "aws_instance" "kali" {
@@ -51,7 +53,9 @@ resource "aws_instance" "kali" {
     encrypted = true
   }
 
-  tags = { Name = "kali-linux" }
+  tags = merge(local.common_tags, {
+    Name = "kali-linux"
+  })
 }
 
 resource "aws_instance" "ubuntu" {
@@ -74,5 +78,7 @@ resource "aws_instance" "ubuntu" {
     encrypted = true
   }
 
-  tags = { Name = "ubuntu-minimal-server" }
+  tags = merge(local.common_tags, {
+    Name = "ubuntu-minimal-server"
+  })
 }
