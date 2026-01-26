@@ -58,7 +58,7 @@ resource "aws_subnet" "ubuntu_subnet" {
 # ============================================================
 resource "aws_network_interface" "wan_nic" {
   subnet_id         = aws_subnet.wan.id
-  security_groups   = [aws_security_group.lab_sg.id]
+  security_groups   = [aws_security_group.pfsense_wan_sg.id]
   source_dest_check = false
 
   tags = merge(local.common_tags, {
@@ -68,7 +68,7 @@ resource "aws_network_interface" "wan_nic" {
 
 resource "aws_network_interface" "lan_nic" {
   subnet_id         = aws_subnet.kali_subnet.id
-  security_groups   = [aws_security_group.lab_sg.id]
+  security_groups   = [aws_security_group.pfsense_internal_sg.id]
   source_dest_check = false
   private_ips       = [local.pfsense_lan_ip]
 
@@ -79,7 +79,7 @@ resource "aws_network_interface" "lan_nic" {
 
 resource "aws_network_interface" "opt_nic" {
   subnet_id         = aws_subnet.ubuntu_subnet.id
-  security_groups   = [aws_security_group.lab_sg.id]
+  security_groups   = [aws_security_group.pfsense_internal_sg.id]
   source_dest_check = false
   private_ips       = [local.pfsense_opt_ip]
 

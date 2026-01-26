@@ -6,31 +6,16 @@ data "aws_availability_zones" "available" {
 }
 
 # ============================================================
-# AMI LOOKUPS
+# AMI MANAGEMENT
 # ============================================================
-data "aws_ami" "pfsense" {
-  most_recent = true
-  owners      = ["aws-marketplace"]
-  filter {
-    name   = "name"
-    values = ["pfSense-plus-ec2-*-amd64*"]
-  }
-}
-
-data "aws_ami" "kali" {
-  most_recent = true
-  owners      = ["aws-marketplace"]
-  filter {
-    name   = "name"
-    values = ["kali-last-snapshot-amd64-*"]
-  }
-}
-
-data "aws_ami" "ubuntu" {
-  most_recent = true
-  owners      = ["099720109477"]
-  filter {
-    name   = "name"
-    values = ["ubuntu-minimal/images/hvm-ssd*/ubuntu-noble-24.04-amd64-minimal-*"]
-  }
-}
+# AMI IDs are pinned in variables.tf for reproducible deployments.
+# 
+# To update AMI IDs:
+# - Windows: See WINDOWS_AMI_GUIDE.md
+# - Linux/Mac: See AMI_MANAGEMENT_GUIDE.md
+#
+# Current AMI versions (eu-central-1):
+# - pfSense Plus: 25.11-RELEASE (ami-046d2a13e1a6f8a53)
+# - Kali Linux: 2025.4.0 (ami-00643799044d656b7)
+# - Ubuntu 24.04: 2026-01-22 (ami-0dc7b24ad83b362b9)
+# Last updated: 2025-01-26
