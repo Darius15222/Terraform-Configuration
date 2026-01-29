@@ -81,6 +81,7 @@ resource "aws_security_group" "pfsense_internal_sg" {
 # ============================================================
 # Controls access to Kali Linux instance
 # - Only accepts traffic from VPC (via pfSense)
+# - Needs outbound access for updates and tool downloads
 resource "aws_security_group" "kali_sg" {
   name        = "kali-sg"
   description = "Security group for Kali Linux instance"
@@ -114,13 +115,33 @@ resource "aws_security_group" "kali_sg" {
 # UBUNTU SERVER SECURITY GROUP
 # ============================================================
 # Controls access to Ubuntu server (vulnerable target)
-# - Only accepts traffic from VPC (via pfSense)
+# - JuiceShop on port 3000 accessible from Kali subnet
+# - SSH accessible from VPC for management
+# - All traffic from VPC allowed for flexibility
 resource "aws_security_group" "ubuntu_sg" {
   name        = "ubuntu-sg"
   description = "Security group for Ubuntu vulnerable server"
   vpc_id      = aws_vpc.main.id
 
-  # Allow all traffic from VPC (primarily from pfSense OPT interface)
+  # Allow JuiceShop access from Kali subnet (explicit rule for clarity)
+  ingress {
+    description = "JuiceShop from Kali subnet"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = [var.subnet_cidrs["kali"]]
+  }
+
+  # Allow SSH from VPC for management
+  ingress {
+    description = "SSH from VPC"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.vpc_cidr]
+  }
+
+  # Allow all traffic from VPC (for other services and flexibility)
   ingress {
     description = "All traffic from VPC"
     from_port   = 0
@@ -129,7 +150,7 @@ resource "aws_security_group" "ubuntu_sg" {
     cidr_blocks = [var.vpc_cidr]
   }
 
-  # Allow all outbound (needs to reach internet via pfSense)
+  # Allow all outbound (needs to reach internet via pfSense for Docker pulls)
   egress {
     description = "Allow all outbound"
     from_port   = 0
