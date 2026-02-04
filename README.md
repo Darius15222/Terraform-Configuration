@@ -1,87 +1,53 @@
-# 🔐 Cybersecurity Lab - AWS Infrastructure
+# 🔐 Cybersecurity Lab - Ubuntu Router Version
 
-**Educational penetration testing environment built with Terraform**
+**Educational penetration testing environment - NOW USING AWS CREDITS!**
 
-[![Security Audit](https://img.shields.io/badge/Security-76%25-green.svg)](SECURITY_AUDIT_REPORT.md)
 [![Infrastructure](https://img.shields.io/badge/Infrastructure-Terraform-623CE4.svg)](https://www.terraform.io/)
 [![AWS](https://img.shields.io/badge/Cloud-AWS-FF9900.svg)](https://aws.amazon.com/)
-[![Status](https://img.shields.io/badge/Status-Production%20Ready-success.svg)](AUDIT_SUMMARY.md)
+[![Router](https://img.shields.io/badge/Router-Ubuntu_24.04-E95420.svg)](https://ubuntu.com/)
+
+---
+
+## 🎉 What Changed
+
+**Replaced pfSense Plus with Ubuntu 24.04 LTS**
+
+**Result:** Uses your $200 AWS credits (saves ~$30/month)!
 
 ---
 
 ## 📖 Overview
 
-This project deploys a complete cybersecurity lab environment on AWS for educational purposes. It includes a pfSense firewall, Kali Linux penetration testing workstation, and Ubuntu server running vulnerable applications for security testing.
+Complete cybersecurity lab with:
+- **Ubuntu Router** - DHCP, DNS, NAT, Firewall, Snort IDS
+- **Kali Linux** - Penetration testing workstation
+- **Ubuntu Server** - OWASP JuiceShop vulnerable application
 
-### 🎯 Purpose
-
-Created for the "System Protection Applications" university course to provide hands-on experience with:
-- Network security and firewall configuration
-- Penetration testing methodologies
-- Vulnerability assessment
-- Traffic analysis and intrusion detection
-- Infrastructure as Code best practices
-
----
-
-## 🏗️ Architecture
-
-```
-                    INTERNET
-                       │
-                       │ Public IP: Elastic IP
-                       ▼
-            ┌─────────────────────┐
-            │  pfSense Firewall   │
-            │  - DNS Server       │
-            │  - DHCP Server      │
-            │  - Snort IDS        │
-            │  - NAT/Routing      │
-            └──────────┬──────────┘
-                       │
-          ┌────────────┴────────────┐
-          │                         │
-          ▼                         ▼
-   ┌─────────────┐          ┌─────────────┐
-   │ Kali Linux  │          │   Ubuntu    │
-   │  (Attacker) │          │   (Target)  │
-   │             │          │             │
-   │ - Wireshark │─────────▶│ - JuiceShop │
-   │ - CyberChef │          │ - Docker    │
-   │ - Burp Suite│          │             │
-   └─────────────┘          └─────────────┘
-   10.0.2.0/24               10.0.3.0/24
-```
+All pfSense functionality preserved, zero marketplace charges.
 
 ---
 
 ## ✨ Features
 
-### 🔥 Network Security
-- **pfSense Firewall** - Multi-interface routing and NAT
-- **Snort IDS** - Real-time intrusion detection
-- **Network Segmentation** - Isolated subnets for attacker/target
-- **DNS/DHCP Services** - Centralized network services
+### 🔥 Network Services (Ubuntu Router)
+- **DHCP Server** (dnsmasq) - Automatic IP assignment
+- **DNS Resolver** (dnsmasq) - Domain: cyberlab.local
+- **NAT/Routing** (iptables) - Internet access for internal networks
+- **Firewall** (iptables) - Access control
+- **Snort IDS** - Intrusion detection
 
 ### 🛠️ Penetration Testing
 - **Kali Linux** - Full suite of pentesting tools
-- **OWASP JuiceShop** - Intentionally vulnerable web application
+- **OWASP JuiceShop** - Vulnerable web application
 - **Wireshark** - Packet capture and analysis
 - **Burp Suite** - HTTP/HTTPS interception
-- **CyberChef** - Data encoding/decoding and analysis
+- **CyberChef** - Data encoding/decoding
 
 ### 🔒 Security Hardening
 - **IMDSv2 Enforced** - SSRF attack prevention
 - **EBS Encryption** - Data at rest protection
 - **Restricted Access** - IP-based admin access control
 - **Private Subnets** - No direct internet exposure
-- **Security Groups** - Defense-in-depth network filtering
-
-### 📚 Infrastructure as Code
-- **Terraform** - Reproducible deployments
-- **Automated Setup** - Docker-based service deployment
-- **Version Controlled** - Git-friendly configuration
-- **Well Documented** - Comprehensive guides included
 
 ---
 
@@ -96,9 +62,7 @@ Created for the "System Protection Applications" university course to provide ha
 ### Deployment (5 commands)
 
 ```bash
-# 1. Clone repository
-git clone <your-repo-url>
-cd cybersecurity-lab
+# 1. Clone/extract files to your project directory
 
 # 2. Configure your admin IP
 cp terraform.tfvars.example terraform.tfvars
@@ -114,170 +78,206 @@ terraform plan
 terraform apply
 ```
 
-**Total deployment time:** ~15 minutes (5 min Terraform + 10 min user-data)
+**Total deployment time:** ~15 minutes (5 min Terraform + 10 min auto-config)
 
 ---
 
-## 📋 Services Deployed
+## 💰 Cost Comparison
 
-| Service | Location | Port | Purpose |
-|---------|----------|------|---------|
-| **pfSense** | Public IP | 443 | Firewall management |
-| **JuiceShop** | Ubuntu | 3000 | Vulnerable web app |
-| **CyberChef** | Kali | 8000 | Data analysis tool |
-| **Snort IDS** | pfSense | - | Intrusion detection |
-| **DNS Server** | pfSense | 53 | Name resolution |
-| **DHCP Server** | pfSense | 67 | IP address management |
+### Before (pfSense)
+```
+EC2:          $0.0208/hour
+Marketplace:  $0.04/hour (NOT covered by credits)
+-------------------------
+Total:        $0.0608/hour = $44/month
+Your cost:    ~$30/month
+```
+
+### After (Ubuntu Router)
+```
+EC2:          $0.0208/hour
+Marketplace:  $0/hour
+-------------------------
+Total:        $0.0208/hour = $15/month
+Credits:      FULLY APPLIED
+Your cost:    $0 (covered by your $200 credits)
+```
+
+**Savings:** ~$30/month or $360/year! 🎉
 
 ---
 
-## 📚 Documentation
+## 📋 What's Configured (from pfSense XML)
 
-### 📖 Essential Guides
+Everything from your pfSense configuration was replicated:
 
-- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Complete deployment walkthrough
-- **[FINAL_TESTING_CHECKLIST.md](FINAL_TESTING_CHECKLIST.md)** - 100+ verification steps
-- **[SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md)** - Security posture analysis
-- **[AUDIT_SUMMARY.md](AUDIT_SUMMARY.md)** - Comprehensive audit results
+### Network Configuration
+- **WAN:** 10.0.1.0/24 (DHCP)
+- **LAN:** 10.0.2.10/24 (Kali network)
+- **OPT1:** 10.0.3.10/24 (Ubuntu network)
 
-### 🛠️ Configuration Files
-
-- **[pfsense-userdata.sh](pfsense-userdata.sh)** - pfSense configuration guide (DNS, DHCP, Cert, Snort)
-- **[ubuntu-userdata.sh](ubuntu-userdata.sh)** - JuiceShop deployment automation
-- **[kali-userdata.sh](kali-userdata.sh)** - CyberChef deployment automation
-
-### 📄 Infrastructure Code
-
+### DHCP Server
 ```
-├── providers.tf          # Terraform and AWS provider config
-├── variables.tf          # Input variables and validation
-├── locals.tf             # Computed values and tags
-├── data.tf               # Data sources (AMIs, AZs)
-├── networking.tf         # VPC, subnets, network interfaces
-├── security.tf           # Security groups
-├── routing.tf            # Route tables and associations
-├── keys.tf               # SSH key generation
-├── instances.tf          # EC2 instances
-└── outputs.tf            # Output values
+LAN:
+  Range: 10.0.2.100-200
+  Gateway: 10.0.2.10
+  DNS: 10.0.2.10
+  Domain: cyberlab.local
+
+OPT1:
+  Range: 10.0.3.100-200
+  Gateway: 10.0.3.10
+  DNS: 10.0.3.10
+  Domain: cyberlab.local
+```
+
+### DNS Resolver
+- Domain: cyberlab.local
+- Upstream: 8.8.8.8, 8.8.4.4
+- DNSSEC: Enabled
+
+### Firewall Rules
+```
+WAN:  SSH (22), HTTP (80) from admin_cidr
+LAN:  Allow all from 10.0.2.0/24
+OPT1: Allow all from 10.0.3.0/24
+NAT:  Masquerade to WAN
+```
+
+### Snort IDS
+- Monitoring: WAN interface
+- Rules: Community rules
+- Logging: /var/log/snort/alert
+
+---
+
+## 📚 Access Information
+
+### Router
+```bash
+# SSH
+ssh -i lab-key.pem ubuntu@<public-ip>
+
+# Web Interface
+https://<public-ip>
+
+# Check status
+router-status
+```
+
+### Kali Linux
+```bash
+# SSH (via router jump)
+ssh -i lab-key.pem -J ubuntu@<public-ip> kali@10.0.2.100
+
+# JuiceShop
+http://10.0.3.100:3000
+
+# CyberChef
+http://localhost:8000 (from Kali browser)
+```
+
+### Ubuntu Server
+```bash
+# SSH (via router jump)
+ssh -i lab-key.pem -J ubuntu@<public-ip> ubuntu@10.0.3.100
+
+# Check JuiceShop
+docker ps
+docker logs juiceshop
 ```
 
 ---
 
-## 🎓 Educational Use Cases
+## ✅ Verification Checklist
 
-### Network Security
-- Configure firewall rules in pfSense
-- Set up DNS and DHCP services
-- Implement network segmentation
-- Monitor traffic with Snort IDS
-- Analyze packets with Wireshark
+After deployment, verify:
 
-### Penetration Testing
-- SQL Injection attacks on JuiceShop
-- Cross-Site Scripting (XSS)
-- Session hijacking and cookie theft
-- Broken authentication exploitation
-- Traffic interception with Burp Suite
+### Router
+- ✅ SSH access works
+- ✅ Web interface shows status
+- ✅ `router-status` command works
 
-### Security Analysis
-- Decode JWT tokens with CyberChef
-- Analyze encrypted traffic
-- Investigate Snort IDS alerts
-- Document attack methodologies
-- Practice incident response
+### DHCP Leases
+- ✅ Kali has IP 10.0.2.100
+- ✅ Ubuntu has IP 10.0.3.100
+- Check: `cat /var/lib/misc/dnsmasq.leases`
+
+### DNS Resolution
+- ✅ `nslookup google.com` works from Kali
+- ✅ `nslookup google.com` works from Ubuntu
+- Server should be 10.0.2.10 (Kali) or 10.0.3.10 (Ubuntu)
+
+### Internet Access
+- ✅ `ping 8.8.8.8` works from Kali
+- ✅ `curl http://google.com` works from Ubuntu
+
+### Services
+- ✅ JuiceShop accessible from Kali
+- ✅ CyberChef accessible from Kali
+- ✅ Snort IDS running on router
 
 ---
 
-## 💰 Cost
+## 🔧 Management Commands
 
-### Running Costs
-
-```
-Component          Instance Type    Cost/Hour    Cost/Day
-──────────────────────────────────────────────────────────
-pfSense            t3.small         $0.0208      $0.50
-Kali Linux         t3.small         $0.0208      $0.50
-Ubuntu Server      t3.micro         $0.0104      $0.25
-Elastic IP         -                $0.005       $0.12
-──────────────────────────────────────────────────────────
-TOTAL (if running 24/7):            $0.30/hour   $7.20/day
+### Router Status
+```bash
+router-status                          # Full status
+cat /var/lib/misc/dnsmasq.leases      # DHCP leases
+iptables -L -n -v                      # Firewall rules
+systemctl status snort                 # Snort IDS
+tail -f /var/log/snort/alert          # Snort alerts
 ```
 
-### Cost Optimization
+### Restart Services
+```bash
+systemctl restart dnsmasq     # DHCP+DNS
+systemctl restart snort        # IDS
+systemctl restart nginx        # Web interface
+```
 
-**💡 Stop instances when not in use:** $0/hour when stopped
+### Edit Configuration
+```bash
+# DHCP/DNS
+sudo nano /etc/dnsmasq.conf
+sudo systemctl restart dnsmasq
+
+# Firewall
+sudo nano /etc/iptables/rules.v4
+sudo iptables-restore < /etc/iptables/rules.v4
+```
+
+---
+
+## 🛠️ Troubleshooting
+
+### Can't access router
 
 ```bash
-# Stop all instances (keeps data, no compute charges)
-aws ec2 stop-instances --instance-ids \
-  $(terraform output -json instance_ids | jq -r '.[]')
+# Check instance state
+aws ec2 describe-instances --filters "Name=tag:Name,Values=ubuntu-router"
 
-# Start when needed
-aws ec2 start-instances --instance-ids <instance-ids>
+# Verify your IP is allowed
+terraform output deployment_summary
 ```
 
-**Estimated actual cost:** $5-10/month (3-4 hours/week usage)
-
----
-
-## 🔐 Security
-
-### Security Posture: 76% (Checkov Scan)
-
-✅ **Implemented Security Controls:**
-- IMDSv2 enforced (SSRF prevention)
-- EBS volume encryption
-- Network isolation (private subnets)
-- Security group restrictions
-- Admin IP whitelisting
-- SSH key authentication (4096-bit RSA)
-
-### Security Scan Results
-
-```
-Total Checks: 62
-Passed: 47 (76%)
-Failed: 15 (intentional cost optimizations)
-Critical Issues: 0
-```
-
-See [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md) for detailed analysis.
-
----
-
-## 🧪 Testing
-
-### Automated Tests
+### DHCP not working
 
 ```bash
-# Run security scan
-checkov -d . --framework terraform
-
-# Validate Terraform
-terraform validate
-
-# Check formatting
-terraform fmt -check
+# On router, check dnsmasq
+systemctl status dnsmasq
+journalctl -u dnsmasq -n 50
 ```
 
-### Manual Verification
+### No internet from Kali/Ubuntu
 
-Complete testing checklist available in [FINAL_TESTING_CHECKLIST.md](FINAL_TESTING_CHECKLIST.md)
+```bash
+# On router, check NAT
+iptables -t nat -L -n -v
 
----
-
-## 🛠️ Configuration
-
-### After Deployment
-
-**pfSense requires manual configuration (50 minutes):**
-
-1. **DNS Resolver** (5 min) - Services > DNS Resolver
-2. **DHCP Server** (10 min) - Services > DHCP Server  
-3. **SSL Certificate** (5 min) - System > Cert Manager
-4. **Snort IDS** (30 min) - System > Package Manager
-
-See [pfsense-userdata.sh](pfsense-userdata.sh) for detailed step-by-step guide.
+# Should see MASQUERADE rule
+```
 
 ---
 
@@ -286,183 +286,94 @@ See [pfsense-userdata.sh](pfsense-userdata.sh) for detailed step-by-step guide.
 ```
 cybersecurity-lab/
 ├── README.md                      # This file
-├── DEPLOYMENT_GUIDE.md            # Complete deployment guide
-├── FINAL_TESTING_CHECKLIST.md     # Verification checklist
-├── SECURITY_AUDIT_REPORT.md       # Security analysis
-├── AUDIT_SUMMARY.md               # Audit results summary
+├── MIGRATION_GUIDE.md             # pfSense → Ubuntu migration details
 │
-├── *.tf                           # Terraform configuration files
-├── *-userdata.sh                  # Instance initialization scripts
-├── terraform.tfvars.example       # Example variables file
-├── .gitignore                     # Git ignore rules
+├── main.tf                        # Project documentation
+├── providers.tf                   # AWS provider configuration
+├── variables.tf                   # Variables (Ubuntu AMI)
+├── locals.tf                      # Computed values
+├── data.tf                        # Data sources
+├── networking.tf                  # VPC, subnets, NICs
+├── security.tf                    # Security groups
+├── routing.tf                     # Route tables
+├── keys.tf                        # SSH keys
+├── instances.tf                   # EC2 instances
+├── outputs.tf                     # Outputs
 │
-└── .terraform.lock.hcl            # Terraform provider lock file
+├── router-userdata.sh             # Router configuration
+├── kali-userdata.sh               # Kali setup
+├── ubuntu-userdata.sh             # JuiceShop deployment
+│
+└── terraform.tfvars.example       # Example variables
 ```
 
 ---
 
-## 🎯 Success Criteria
+## 🎓 Educational Use Cases
 
-Your lab is fully operational when:
+### Network Administration
+- DHCP configuration
+- DNS resolution
+- NAT and routing
+- Firewall rule management
 
-- ✅ All 3 EC2 instances running
-- ✅ pfSense web interface accessible
-- ✅ JuiceShop accessible from Kali
-- ✅ CyberChef accessible from Kali
-- ✅ DNS resolution working
-- ✅ DHCP leases assigned
-- ✅ Snort IDS generating alerts
-- ✅ Wireshark capturing traffic
-- ✅ SQL injection attack successful
-- ✅ Cookie interception working
+### Penetration Testing
+- SQL injection attacks
+- XSS exploitation
+- Session hijacking
+- Traffic analysis
 
----
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-**Can't access pfSense:**
-→ Check `admin_cidr` in `terraform.tfvars` matches your current IP
-
-**JuiceShop not responding:**
-→ SSH to Ubuntu, run: `docker restart juiceshop`
-
-**No internet on Kali/Ubuntu:**
-→ Verify pfSense instance is running and routes are correct
-
-**Snort not generating alerts:**
-→ Wait 5 minutes after attack, verify rules downloaded
-
-See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) troubleshooting section for more.
+### Security Monitoring
+- IDS configuration
+- Alert analysis
+- Packet capture
+- Forensics
 
 ---
 
-## 🧹 Cleanup
+## 💾 Maintenance
+
+### Start All Instances
+```bash
+terraform output -json instance_ids | jq -r '.[]' | xargs aws ec2 start-instances --instance-ids
+```
+
+### Stop All Instances (save money!)
+```bash
+terraform output -json instance_ids | jq -r '.[]' | xargs aws ec2 stop-instances --instance-ids
+```
 
 ### Destroy Infrastructure
-
 ```bash
-# ⚠️ WARNING: This deletes ALL resources and data
 terraform destroy
-
-# Type: yes
-```
-
-### Verify Cleanup
-
-```bash
-# Check no resources remain
-terraform state list
-# Expected: empty
-
-# Check AWS console
-aws ec2 describe-instances --filters "Name=tag:Project,Values=CyberLab"
-# Expected: no instances
 ```
 
 ---
 
-## 📝 License
+## 📝 Documentation
 
-This project is created for educational purposes as part of university coursework.
-
----
-
-## 🤝 Contributing
-
-This is an educational project. Improvements welcome:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
-
----
-
-## 📞 Support
-
-### Documentation
-- Start with [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)
-- Check [FINAL_TESTING_CHECKLIST.md](FINAL_TESTING_CHECKLIST.md) for verification
-- Review [SECURITY_AUDIT_REPORT.md](SECURITY_AUDIT_REPORT.md) for security info
-
-### Quick Reference
-
-```bash
-# Get all outputs
-terraform output
-
-# Get specific IP
-terraform output pfsense_public_ip
-
-# SSH to instances
-terraform output -json ssh_commands
-
-# View network architecture
-terraform output network_architecture
-```
-
----
-
-## 🎓 Academic Context
-
-**Course:** System Protection Applications  
-**Institution:** University of Sibiu, Romania  
-**Purpose:** Hands-on cybersecurity education  
-**Topics Covered:**
-- Network security architecture
-- Firewall configuration
-- Intrusion detection systems
-- Penetration testing methodologies
-- Vulnerability assessment
-- Traffic analysis and forensics
+- **MIGRATION_GUIDE.md** - Detailed pfSense → Ubuntu migration info
+- **router-userdata.sh** - Router configuration script (commented)
+- All Terraform files have inline comments
 
 ---
 
 ## ⚠️ Disclaimer
 
-This infrastructure is designed for **educational purposes only**. The vulnerable applications (JuiceShop) are intentionally insecure and should **never** be exposed to the public internet or used in production environments.
-
-**Use responsibly:**
-- ✅ Educational learning
-- ✅ Controlled lab environment
-- ✅ Personal skill development
-- ❌ Production workloads
-- ❌ Storing sensitive data
-- ❌ Public internet exposure
+Educational purposes only. Never expose to public internet or use in production.
 
 ---
 
 ## 🏆 Acknowledgments
 
 **Technologies:**
-- [Terraform](https://www.terraform.io/) - Infrastructure as Code
-- [pfSense](https://www.pfsense.org/) - Open-source firewall
-- [Kali Linux](https://www.kali.org/) - Penetration testing distribution
-- [OWASP JuiceShop](https://owasp.org/www-project-juice-shop/) - Vulnerable web app
-- [CyberChef](https://gchq.github.io/CyberChef/) - Data analysis tool
-- [Snort](https://www.snort.org/) - Intrusion detection system
-- [AWS](https://aws.amazon.com/) - Cloud infrastructure
-
-**Security Tools:**
-- [Checkov](https://www.checkov.io/) - Infrastructure security scanner
-- [Wireshark](https://www.wireshark.org/) - Network protocol analyzer
-- [Burp Suite](https://portswigger.net/burp) - Web security testing
+- [Terraform](https://www.terraform.io/)
+- [Ubuntu](https://ubuntu.com/)
+- [Kali Linux](https://www.kali.org/)
+- [OWASP JuiceShop](https://owasp.org/www-project-juice-shop/)
+- [Snort](https://www.snort.org/)
+- [AWS](https://aws.amazon.com/)
 
 ---
 
-## 📈 Project Status
-
-- ✅ **Infrastructure:** Complete and tested
-- ✅ **Documentation:** Comprehensive guides provided
-- ✅ **Security Audit:** 76% compliance achieved
-- ✅ **Testing:** All scenarios documented
-- ✅ **Ready for Use:** Approved for deployment
-
-**Last Updated:** January 29, 2026  
-**Status:** Production Ready ✅
-
----
-
-**Made with ❤️ for cybersecurity education**
+**Made with ❤️ for cybersecurity education - Now using AWS credits!** 🎉

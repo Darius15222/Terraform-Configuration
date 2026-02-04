@@ -50,7 +50,7 @@ resource "aws_network_interface" "wan_nic" {
   security_groups   = [aws_security_group.pfsense_wan_sg.id]
   source_dest_check = false
   tags = merge(local.common_tags, {
-    Name = "pfsense-wan-nic"
+    Name = "router-wan-nic"
   })
 }
 
@@ -60,7 +60,7 @@ resource "aws_network_interface" "lan_nic" {
   source_dest_check = false
   private_ips       = [local.pfsense_lan_ip]
   tags = merge(local.common_tags, {
-    Name = "pfsense-lan-nic"
+    Name = "router-lan-nic"
   })
 }
 
@@ -70,7 +70,7 @@ resource "aws_network_interface" "opt_nic" {
   source_dest_check = false
   private_ips       = [local.pfsense_opt_ip]
   tags = merge(local.common_tags, {
-    Name = "pfsense-opt-nic"
+    Name = "router-opt-nic"
   })
 }
 
@@ -78,6 +78,6 @@ resource "aws_eip" "wan_eip" {
   domain            = "vpc"
   network_interface = aws_network_interface.wan_nic.id
   tags = merge(local.common_tags, {
-    Name = "pfsense-wan-eip"
+    Name = "router-wan-eip"
   })
 }

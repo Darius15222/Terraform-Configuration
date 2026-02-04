@@ -110,8 +110,8 @@ NETWORK INFORMATION
 ────────────────────────────────────────────────────────────
 Kali IP:        10.0.2.100
 Ubuntu IP:      10.0.3.100
-pfSense LAN:    10.0.2.10
-pfSense OPT:    10.0.3.10
+Router LAN:     10.0.2.10
+Router OPT:     10.0.3.10
 
 QUICK ATTACK SCENARIOS
 ────────────────────────────────────────────────────────────

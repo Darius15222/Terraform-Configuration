@@ -1,39 +1,35 @@
-# 1. Terraform Mechanics (Heavy folders)
-# The .terraform folder contains big provider plugins. 
-# You don't need to save this; 'terraform init' recreates it.
-.terraform/
-.terraform.lock.hcl
-
-# 2. Terraform State (SENSITIVE - Do Not Commit)
-# These files contain your private keys, passwords, and IP addresses.
-# Committing them is a major security risk.
+# Terraform state files
 *.tfstate
 *.tfstate.*
 *.tfstate.backup
 
-# 3. Crash Logs
-crash.log
-crash.*.log
+# Terraform directories
+.terraform/
+.terraform.lock.hcl
 
-# 4. Sensitive Variables (CRITICAL - Contains your admin IP!)
-# NEVER commit terraform.tfvars - it contains your admin IP address
+# Variable files with sensitive data
 *.tfvars
-*.tfvars.json
 !terraform.tfvars.example
 
-# 5. Project Specific - Generated Secrets
-# The SSH key your code creates. Never commit private keys!
-lab-key.pem
+# SSH keys
 *.pem
+lab-key.pem
 
-# 6. Terraform Plan files (Optional, but good practice)
+# Terraform plan files
 *.tfplan
 *.tfplan.json
 
-# 7. OS/Editor System Files
+# Crash logs
+crash.log
+crash.*.log
+
+# OS files
 .DS_Store
 .vscode/
 .idea/
 *.swp
 *.bak
 *~
+
+# Backup files
+*.backup

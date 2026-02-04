@@ -733,4 +733,4 @@ aws ce get-cost-and-usage `
 
 
 
-## ToDo: Dhcp, dns, ssl, snort configuration automatically after the apply so that the kali and ubuntu have access to internet to access docker 📚
+## ToDo: Dhcp, dns, ssl, snort configuration automatically after the apply so that the kali and ubuntu have access to internet to access docker (FROM XML BACKUP), certificat semnat de o autoritate recunoscuta => am nevoie de domeniu 📚

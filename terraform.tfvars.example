@@ -11,9 +11,8 @@
 # Format: xxx.xxx.xxx.xxx/32 (the /32 means "only this single IP")
 admin_cidr = "1.2.3.4/32"
 
-# IMPORTANT: Update AMI IDs in variables.tf before first deployment!
-# The default AMI IDs are placeholders and will not work.
-# See AMI_MANAGEMENT_GUIDE.md for instructions on finding AMI IDs.
+# IMPORTANT: Ubuntu 24.04 LTS AMI is already configured in variables.tf
+# No need to change AMI IDs - they use standard AWS AMIs (covered by credits)
 
 # OPTIONAL: Override default values below as needed
 # aws_region = "eu-central-1"
@@ -26,24 +25,14 @@ admin_cidr = "1.2.3.4/32"
 # }
 
 # instance_types = {
-#   pfsense = "t3.small"
-#   kali    = "t3.small"
-#   ubuntu  = "t3.micro"
+#   router = "t3.small"
+#   kali   = "t3.small"
+#   ubuntu = "t3.micro"
 # }
 
 # project_name = "CyberLab"
 # environment  = "Dev"
 
-# NOTE: AMI IDs are defined in variables.tf, not here
-# To use different AMI IDs, either:
-#   1. Update variables.tf defaults (recommended)
-#   2. Override here (advanced):
-# pfsense_ami_ids = {
-#   eu-central-1 = "ami-your-pfsense-ami"
-# }
-# kali_ami_ids = {
-#   eu-central-1 = "ami-your-kali-ami"
-# }
-# ubuntu_ami_ids = {
-#   eu-central-1 = "ami-your-ubuntu-ami"
-# }
+# NOTE: Router AMI ID already set in variables.tf
+# Using Ubuntu 24.04 LTS (ami-0084a47cc718c111a)
+# This is a FREE AWS AMI that uses your credits!

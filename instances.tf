@@ -1,6 +1,6 @@
-resource "aws_instance" "pfsense" {
-  ami           = var.pfsense_ami_ids[var.aws_region]
-  instance_type = var.instance_types["pfsense"]
+resource "aws_instance" "router" {
+  ami           = var.router_ami_ids[var.aws_region]
+  instance_type = var.instance_types["router"]
   key_name      = aws_key_pair.generated_key.key_name
 
   metadata_options {
@@ -26,10 +26,12 @@ resource "aws_instance" "pfsense" {
     device_index         = 2
   }
 
-  user_data = file("${path.module}/pfsense-userdata.sh")
+  user_data = templatefile("${path.module}/router-userdata.sh", {
+    admin_cidr = var.admin_cidr
+  })
   
   tags = merge(local.common_tags, {
-    Name = "pfsense-firewall"
+    Name = "ubuntu-router"
     Role = "Gateway/Firewall"
   })
 }
@@ -55,7 +57,7 @@ resource "aws_instance" "kali" {
   user_data = file("${path.module}/kali-userdata.sh")
 
   depends_on = [
-    aws_instance.pfsense,
+    aws_instance.router,
     aws_eip.wan_eip
   ]
 
@@ -86,7 +88,7 @@ resource "aws_instance" "ubuntu" {
   user_data = file("${path.module}/ubuntu-userdata.sh")
 
   depends_on = [
-    aws_instance.pfsense,
+    aws_instance.router,
     aws_eip.wan_eip
   ]
 

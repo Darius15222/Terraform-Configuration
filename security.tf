@@ -1,12 +1,12 @@
 # ============================================================
-# PFSENSE WAN SECURITY GROUP
+# ROUTER WAN SECURITY GROUP
 # ============================================================
-# Controls access to pfSense from the internet
+# Controls access to Ubuntu Router from the internet
 # - SSH (22): Admin access from specified IP
 # - HTTPS (443): Web interface access from specified IP
 resource "aws_security_group" "pfsense_wan_sg" {
-  name        = "pfsense-wan-sg"
-  description = "Security group for pfSense WAN interface - external access"
+  name        = "router-wan-sg"
+  description = "Security group for Router WAN interface - external access"
   vpc_id      = aws_vpc.main.id
 
   # SSH access from admin IP only
@@ -27,7 +27,7 @@ resource "aws_security_group" "pfsense_wan_sg" {
     cidr_blocks = [var.admin_cidr]
   }
 
-  # Allow all outbound traffic (pfSense needs internet access)
+  # Allow all outbound traffic (router needs internet access)
   egress {
     description = "Allow all outbound"
     from_port   = 0
@@ -37,19 +37,19 @@ resource "aws_security_group" "pfsense_wan_sg" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "pfsense-wan-sg"
-    Role = "Firewall WAN Interface"
+    Name = "router-wan-sg"
+    Role = "Router WAN Interface"
   })
 }
 
 # ============================================================
-# PFSENSE INTERNAL SECURITY GROUP
+# ROUTER INTERNAL SECURITY GROUP
 # ============================================================
-# Controls access to pfSense LAN and OPT interfaces
+# Controls access to Router LAN and OPT interfaces
 # - Allows all traffic from within the VPC
 resource "aws_security_group" "pfsense_internal_sg" {
-  name        = "pfsense-internal-sg"
-  description = "Security group for pfSense LAN/OPT interfaces - internal traffic"
+  name        = "router-internal-sg"
+  description = "Security group for Router LAN/OPT interfaces - internal traffic"
   vpc_id      = aws_vpc.main.id
 
   # Allow all traffic from VPC (LAN and OPT subnets)
@@ -71,8 +71,8 @@ resource "aws_security_group" "pfsense_internal_sg" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "pfsense-internal-sg"
-    Role = "Firewall Internal Interfaces"
+    Name = "router-internal-sg"
+    Role = "Router Internal Interfaces"
   })
 }
 
@@ -80,14 +80,14 @@ resource "aws_security_group" "pfsense_internal_sg" {
 # KALI LINUX SECURITY GROUP
 # ============================================================
 # Controls access to Kali Linux instance
-# - Only accepts traffic from VPC (via pfSense)
+# - Only accepts traffic from VPC (via Router)
 # - Needs outbound access for updates and tool downloads
 resource "aws_security_group" "kali_sg" {
   name        = "kali-sg"
   description = "Security group for Kali Linux instance"
   vpc_id      = aws_vpc.main.id
 
-  # Allow all traffic from VPC (primarily from pfSense LAN interface)
+  # Allow all traffic from VPC (primarily from Router LAN interface)
   ingress {
     description = "All traffic from VPC"
     from_port   = 0
@@ -96,7 +96,7 @@ resource "aws_security_group" "kali_sg" {
     cidr_blocks = [var.vpc_cidr]
   }
 
-  # Allow all outbound (needs to reach internet via pfSense)
+  # Allow all outbound (needs to reach internet via Router)
   egress {
     description = "Allow all outbound"
     from_port   = 0
@@ -150,7 +150,7 @@ resource "aws_security_group" "ubuntu_sg" {
     cidr_blocks = [var.vpc_cidr]
   }
 
-  # Allow all outbound (needs to reach internet via pfSense for Docker pulls)
+  # Allow all outbound (needs to reach internet via Router for Docker pulls)
   egress {
     description = "Allow all outbound"
     from_port   = 0

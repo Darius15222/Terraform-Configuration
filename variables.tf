@@ -28,9 +28,9 @@ variable "subnet_cidrs" {
 variable "instance_types" {
   type = map(string)
   default = {
-    pfsense = "t3.small"
-    kali    = "t3.small"
-    ubuntu  = "t3.micro"
+    router = "t3.small"
+    kali   = "t3.small"
+    ubuntu = "t3.micro"
   }
 }
 
@@ -49,10 +49,10 @@ variable "environment" {
   default = "Dev"
 }
 
-variable "pfsense_ami_ids" {
+variable "router_ami_ids" {
   type = map(string)
   default = {
-    eu-central-1 = "ami-046d2a13e1a6f8a53"
+    eu-central-1 = "ami-0084a47cc718c111a"
   }
 }
 
