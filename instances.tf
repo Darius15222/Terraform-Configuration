@@ -1,5 +1,5 @@
 resource "aws_instance" "router" {
-  ami           = var.router_ami_ids[var.aws_region]
+  ami           = data.aws_ami.ubuntu_router.id
   instance_type = var.instance_types["router"]
   key_name      = aws_key_pair.generated_key.key_name
 
@@ -27,7 +27,9 @@ resource "aws_instance" "router" {
   }
 
   user_data = templatefile("${path.module}/router-userdata.sh", {
-    admin_cidr = var.admin_cidr
+    admin_cidr  = var.admin_cidr
+    domain_name = var.domain_name
+    ssl_email   = var.ssl_email
   })
   
   user_data_replace_on_change = true
@@ -39,7 +41,7 @@ resource "aws_instance" "router" {
 }
 
 resource "aws_instance" "kali" {
-  ami                    = var.kali_ami_ids[var.aws_region]
+  ami                    = data.aws_ami.kali.id
   instance_type          = var.instance_types["kali"]
   key_name               = aws_key_pair.generated_key.key_name
   subnet_id              = aws_subnet.kali_subnet.id
@@ -57,6 +59,8 @@ resource "aws_instance" "kali" {
   }
 
   user_data = file("${path.module}/kali-userdata.sh")
+  
+  user_data_replace_on_change = true
 
   depends_on = [
     aws_instance.router,
@@ -70,7 +74,7 @@ resource "aws_instance" "kali" {
 }
 
 resource "aws_instance" "ubuntu" {
-  ami                    = var.ubuntu_ami_ids[var.aws_region]
+  ami                    = data.aws_ami.ubuntu_server.id
   instance_type          = var.instance_types["ubuntu"]
   key_name               = aws_key_pair.generated_key.key_name
   subnet_id              = aws_subnet.ubuntu_subnet.id
@@ -88,6 +92,8 @@ resource "aws_instance" "ubuntu" {
   }
 
   user_data = file("${path.module}/ubuntu-userdata.sh")
+  
+  user_data_replace_on_change = true
 
   depends_on = [
     aws_instance.router,

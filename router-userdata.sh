@@ -2,16 +2,12 @@
 # ============================================================
 # UBUNTU ROUTER - Complete pfSense Replacement
 # ============================================================
-# Replicates all pfSense functionality:
-# - Routing/NAT between WAN, LAN, OPT1
-# - DHCP Server (LAN: 10.0.2.100-200, OPT1: 10.0.3.100-200)
-# - DNS Resolver (dnsmasq with DNSSEC)
-# - Firewall (iptables)
-# - Snort IDS
+# Replicates all pfSense functionality with Let's Encrypt SSL
 #
 # TERRAFORM TEMPLATE VARIABLES:
-# - ${admin_cidr} : Injected by Terraform (e.g., "1.2.3.4/32")
-#                   Used for SSH/HTTPS access control on WAN interface
+# - ${admin_cidr}  : Admin IP for SSH/HTTPS access
+# - ${domain_name} : Domain for Let's Encrypt (empty = self-signed)
+# - ${ssl_email}   : Email for Let's Encrypt notifications
 # ============================================================
 
 set -e  # Exit on any error
@@ -24,6 +20,7 @@ echo "========================================"
 echo "Ubuntu Router Setup Started"
 echo "Timestamp: $(date)"
 echo "Admin CIDR: ${admin_cidr}"
+echo "Domain: ${domain_name:-NONE (using self-signed)}"
 echo "========================================"
 
 # ============================================================
@@ -72,15 +69,13 @@ log_step "[1/8] Updating system packages and installing prerequisites"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Update package lists
 apt-get update -y
 check_success "Package list update"
 
-# Upgrade existing packages
 apt-get upgrade -y
 check_success "System upgrade"
 
-# Install required packages
+# Install required packages (including certbot for Let's Encrypt)
 apt-get install -y \
     dnsmasq \
     iptables-persistent \
@@ -91,7 +86,9 @@ apt-get install -y \
     curl \
     wget \
     nginx \
-    openssl
+    openssl \
+    certbot \
+    python3-certbot-nginx
 check_success "Required packages installation"
 
 # ============================================================
@@ -99,7 +96,6 @@ check_success "Required packages installation"
 # ============================================================
 log_step "[2/8] Enabling IP forwarding for routing"
 
-# Check if already configured
 if grep -q "^net.ipv4.ip_forward = 1" /etc/sysctl.conf; then
     echo "IP forwarding already configured"
 else
@@ -112,7 +108,6 @@ EOF
     check_success "IP forwarding configuration"
 fi
 
-# Apply immediately
 sysctl -p
 check_success "Apply sysctl settings"
 
@@ -121,15 +116,9 @@ check_success "Apply sysctl settings"
 # ============================================================
 log_step "[3/8] Configuring network interfaces"
 
-# Wait for interfaces to be available
 wait_for_interface ens5  # WAN
 wait_for_interface ens6  # LAN
 wait_for_interface ens7  # OPT1
-
-# Interface mapping from pfSense:
-# WAN:  ens5  (10.0.1.0/24, DHCP from AWS)
-# LAN:  ens6  (10.0.2.10/24, static)
-# OPT1: ens7  (10.0.3.10/24, static)
 
 cat > /etc/netplan/60-router.yaml <<'EOF'
 network:
@@ -152,14 +141,11 @@ EOF
 
 check_success "Netplan configuration file created"
 
-# Apply network configuration
 netplan apply
 check_success "Network configuration applied"
 
-# Wait for interfaces to settle
 sleep 5
 
-# Verify interface configuration
 log_step "Verifying interface configuration"
 ip addr show ens5 | grep "inet " || echo "⚠️  WAN interface (ens5) - DHCP pending"
 ip addr show ens6 | grep "10.0.2.10" && echo "✅ LAN interface (ens6) - 10.0.2.10 configured"
@@ -170,7 +156,6 @@ ip addr show ens7 | grep "10.0.3.10" && echo "✅ OPT1 interface (ens7) - 10.0.3
 # ============================================================
 log_step "[4/8] Configuring DHCP and DNS server (dnsmasq)"
 
-# Backup original configuration
 if [ -f /etc/dnsmasq.conf ]; then
     mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup.$(date +%Y%m%d)
     echo "Original dnsmasq.conf backed up"
@@ -181,62 +166,52 @@ cat > /etc/dnsmasq.conf <<'EOF'
 # DNSMASQ CONFIGURATION - Replaces pfSense DHCP+DNS
 # ============================================================
 
-# General DNS settings
-domain-needed          # Don't forward short names
-bogus-priv             # Don't forward private IP reverse lookups
-no-resolv              # Don't read /etc/resolv.conf
-no-poll                # Don't poll /etc/resolv.conf for changes
+domain-needed
+bogus-priv
+no-resolv
+no-poll
 
-# Upstream DNS servers
-server=8.8.8.8         # Google DNS primary
-server=8.8.4.4         # Google DNS secondary
+server=8.8.8.8
+server=8.8.4.4
 
-# Listen on LAN and OPT1 only (not WAN for security)
-interface=ens6         # LAN interface
-interface=ens7         # OPT1 interface
-bind-interfaces        # Bind only to specified interfaces
+interface=ens6
+interface=ens7
+bind-interfaces
 
-# Domain configuration
-domain=cyberlab.local  # Local domain name
-local=/cyberlab.local/ # Don't forward local domain queries
-expand-hosts           # Add domain to hosts entries
+domain=cyberlab.local
+local=/cyberlab.local/
+expand-hosts
 
 # DHCP for LAN (10.0.2.0/24) - Kali subnet
 dhcp-range=set:lan,10.0.2.100,10.0.2.200,255.255.255.0,12h
-dhcp-option=tag:lan,option:router,10.0.2.10           # Gateway
-dhcp-option=tag:lan,option:dns-server,10.0.2.10       # DNS server
-dhcp-option=tag:lan,option:domain-name,cyberlab.local # Domain
+dhcp-option=tag:lan,option:router,10.0.2.10
+dhcp-option=tag:lan,option:dns-server,10.0.2.10
+dhcp-option=tag:lan,option:domain-name,cyberlab.local
 
 # DHCP for OPT1 (10.0.3.0/24) - Ubuntu server subnet
 dhcp-range=set:opt1,10.0.3.100,10.0.3.200,255.255.255.0,12h
-dhcp-option=tag:opt1,option:router,10.0.3.10          # Gateway
-dhcp-option=tag:opt1,option:dns-server,10.0.3.10      # DNS server
-dhcp-option=tag:opt1,option:domain-name,cyberlab.local # Domain
+dhcp-option=tag:opt1,option:router,10.0.3.10
+dhcp-option=tag:opt1,option:dns-server,10.0.3.10
+dhcp-option=tag:opt1,option:domain-name,cyberlab.local
 
-# DNS cache settings
-cache-size=1000        # DNS cache size
-dns-forward-max=150    # Max concurrent DNS queries
+cache-size=1000
+dns-forward-max=150
 
-# DNSSEC (matches pfSense security)
-dnssec                 # Enable DNSSEC validation
+dnssec
 trust-anchor=.,20326,8,2,E06D44B80B8F1D39A95C0B0D7C65D08458E880409BBC683457104237C7F8EC8D
 
-# Logging
-log-queries            # Log DNS queries
-log-dhcp               # Log DHCP transactions
+log-queries
+log-dhcp
 
-# DHCP authoritative (we're the only DHCP server)
 dhcp-authoritative
 EOF
 
 check_success "dnsmasq configuration created"
 
-# Enable and start dnsmasq service
 systemctl enable dnsmasq
 systemctl restart dnsmasq
 check_success "dnsmasq service started"
 
-# Verify dnsmasq is running
 if systemctl is-active --quiet dnsmasq; then
     echo "✅ dnsmasq service is active"
 else
@@ -250,55 +225,45 @@ fi
 # ============================================================
 log_step "[5/8] Configuring NAT and firewall rules"
 
-# Clear all existing rules
 iptables -F
 iptables -t nat -F
 iptables -t mangle -F
 iptables -X
 
-# Set default policies (secure by default)
 iptables -P INPUT DROP
 iptables -P FORWARD DROP
 iptables -P OUTPUT ACCEPT
 
-# Allow loopback interface
 iptables -A INPUT -i lo -j ACCEPT
 iptables -A OUTPUT -o lo -j ACCEPT
 
-# Allow established and related connections
 iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # WAN interface (ens5) rules
-# Allow SSH from admin IP only (Terraform injects admin_cidr)
 iptables -A INPUT -i ens5 -p tcp --dport 22 -s ${admin_cidr} -m state --state NEW -j ACCEPT
-
-# Allow HTTPS to web management interface from admin IP only
 iptables -A INPUT -i ens5 -p tcp --dport 443 -s ${admin_cidr} -m state --state NEW -j ACCEPT
 
-# LAN interface (ens6) rules - Allow all from Kali subnet
+# Allow port 80 for Let's Encrypt if domain is configured
+if [ -n "${domain_name}" ]; then
+    iptables -A INPUT -i ens5 -p tcp --dport 80 -m state --state NEW -j ACCEPT
+    echo "✅ Port 80 opened for Let's Encrypt certificate validation"
+fi
+
+# LAN and OPT1 interfaces - allow all internal traffic
 iptables -A INPUT -i ens6 -j ACCEPT
 iptables -A FORWARD -i ens6 -j ACCEPT
-
-# OPT1 interface (ens7) rules - Allow all from Ubuntu subnet
 iptables -A INPUT -i ens7 -j ACCEPT
 iptables -A FORWARD -i ens7 -j ACCEPT
 
-# NAT configuration for internet access (MASQUERADE)
-# This replaces pfSense's NAT functionality
+# NAT configuration
 iptables -t nat -A POSTROUTING -o ens5 -j MASQUERADE
-
-# Log dropped packets (optional, for debugging)
-# iptables -A INPUT -m limit --limit 5/min -j LOG --log-prefix "iptables-INPUT-DROP: " --log-level 4
-# iptables -A FORWARD -m limit --limit 5/min -j LOG --log-prefix "iptables-FORWARD-DROP: " --log-level 4
 
 check_success "iptables rules configured"
 
-# Save iptables rules (persist across reboots)
 iptables-save > /etc/iptables/rules.v4
 check_success "iptables rules saved"
 
-# Display configured rules for verification
 log_step "Current firewall rules:"
 iptables -L -n -v --line-numbers | head -40
 
@@ -307,7 +272,6 @@ iptables -L -n -v --line-numbers | head -40
 # ============================================================
 log_step "[6/8] Configuring Snort IDS"
 
-# Configure Snort to monitor WAN interface
 cat > /etc/snort/snort.debian.conf <<'EOF'
 DEBIAN_SNORT_STARTUP="boot"
 DEBIAN_SNORT_HOME_NET="10.0.0.0/8"
@@ -317,16 +281,13 @@ EOF
 
 check_success "Snort debian configuration"
 
-# Update Snort main configuration
 sed -i 's/^ipvar HOME_NET .*/ipvar HOME_NET 10.0.0.0\/8/' /etc/snort/snort.conf
 sed -i 's/^ipvar EXTERNAL_NET .*/ipvar EXTERNAL_NET any/' /etc/snort/snort.conf
 
 check_success "Snort HOME_NET and EXTERNAL_NET configured"
 
-# Create rules directory if it doesn't exist
 mkdir -p /etc/snort/rules
 
-# Download community rules (best effort - may require Oinkcode)
 log_step "Downloading Snort community rules..."
 cd /tmp
 if wget -q --timeout=30 https://www.snort.org/downloads/community/community-rules.tar.gz 2>/dev/null; then
@@ -338,7 +299,6 @@ else
     echo "ℹ️  Snort will start with default rules"
 fi
 
-# Enable Snort service
 systemctl enable snort
 systemctl restart snort || echo "⚠️  Snort will start after full configuration"
 
@@ -347,23 +307,163 @@ systemctl restart snort || echo "⚠️  Snort will start after full configurati
 # ============================================================
 log_step "[7/8] Setting up HTTPS web management interface"
 
-# Generate self-signed SSL certificate
-log_step "Generating self-signed SSL certificate (10-year validity)..."
-openssl req -x509 -nodes -days 3650 \
-  -newkey rsa:2048 \
-  -keyout /etc/ssl/private/router.key \
-  -out /etc/ssl/certs/router.crt \
-  -subj "/C=RO/ST=Sibiu/L=Sibiu/O=CyberLab/CN=router.cyberlab.local" \
-  2>/dev/null
+# Get public IP for certificate
+PUBLIC_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
 
-check_success "SSL certificate generated"
+if [ -n "${domain_name}" ] && [ -n "${ssl_email}" ]; then
+    # ========================================
+    # Let's Encrypt Certificate (Real SSL)
+    # ========================================
+    log_step "Obtaining Let's Encrypt SSL certificate for ${domain_name}..."
+    
+    # Create minimal nginx config for HTTP-01 challenge
+    cat > /etc/nginx/sites-available/default <<EOF
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name ${domain_name};
+    
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+EOF
+    
+    systemctl restart nginx
+    sleep 3
+    
+    # Obtain certificate (non-interactive)
+    certbot certonly --nginx \
+        --non-interactive \
+        --agree-tos \
+        --email ${ssl_email} \
+        --domain ${domain_name} \
+        --redirect
+    
+    if [ $? -eq 0 ]; then
+        echo "✅ Let's Encrypt certificate obtained successfully!"
+        
+        # Configure nginx with Let's Encrypt certificate
+        cat > /etc/nginx/sites-available/default <<EOF
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name ${domain_name};
+    
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+    
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
 
-# Set proper permissions
-chmod 600 /etc/ssl/private/router.key
-chmod 644 /etc/ssl/certs/router.crt
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    
+    ssl_certificate /etc/letsencrypt/live/${domain_name}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${domain_name}/privkey.pem;
+    
+    # SSL security configuration (Mozilla Intermediate)
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    
+    root /var/www/html;
+    index index.html;
+    
+    server_name ${domain_name};
+    
+    location / {
+        try_files \$uri \$uri/ =404;
+    }
+    
+    location /status {
+        default_type application/json;
+        alias /var/www/html/status.json;
+    }
+}
+EOF
+        
+        # Setup automatic renewal (certbot does this automatically via systemd timer)
+        systemctl enable certbot.timer
+        systemctl start certbot.timer
+        
+        echo "✅ Certbot auto-renewal enabled (checks twice daily)"
+        
+        SSL_TYPE="Let's Encrypt (Auto-renews)"
+        CERT_PATH="/etc/letsencrypt/live/${domain_name}/fullchain.pem"
+    else
+        echo "❌ Let's Encrypt certificate failed - falling back to self-signed"
+        # Fall through to self-signed section
+    fi
+fi
 
-# Configure nginx for HTTPS
-cat > /etc/nginx/sites-available/default <<'EOF'
+# ========================================
+# Self-Signed Certificate (Fallback)
+# ========================================
+if [ ! -f "$CERT_PATH" ]; then
+    log_step "Generating self-signed SSL certificate..."
+    
+    cat > /tmp/openssl-san.cnf <<EOF
+[req]
+default_bits = 2048
+prompt = no
+default_md = sha256
+distinguished_name = dn
+req_extensions = req_ext
+x509_extensions = v3_ca
+
+[dn]
+C=RO
+ST=Sibiu
+L=Sibiu
+O=CyberLab
+CN=router.cyberlab.local
+
+[req_ext]
+subjectAltName = @alt_names
+
+[v3_ca]
+subjectAltName = @alt_names
+basicConstraints = critical,CA:FALSE
+keyUsage = critical,digitalSignature,keyEncipherment
+extendedKeyUsage = serverAuth
+
+[alt_names]
+DNS.1 = router.cyberlab.local
+DNS.2 = localhost
+IP.1 = 10.0.2.10
+IP.2 = 10.0.3.10
+IP.3 = ${PUBLIC_IP}
+IP.4 = 127.0.0.1
+EOF
+    
+    openssl req -x509 -nodes -days 3650 \
+      -newkey rsa:2048 \
+      -keyout /etc/ssl/private/router.key \
+      -out /etc/ssl/certs/router.crt \
+      -config /tmp/openssl-san.cnf \
+      2>/dev/null
+    
+    check_success "Self-signed SSL certificate generated"
+    
+    chmod 600 /etc/ssl/private/router.key
+    chmod 644 /etc/ssl/certs/router.crt
+    rm -f /tmp/openssl-san.cnf
+    
+    # Configure nginx with self-signed certificate
+    cat > /etc/nginx/sites-available/default <<'EOF'
 server {
     listen 443 ssl default_server;
     listen [::]:443 ssl default_server;
@@ -385,18 +485,21 @@ server {
         try_files $uri $uri/ =404;
     }
     
-    # Status endpoint for monitoring
     location /status {
         default_type application/json;
         alias /var/www/html/status.json;
     }
 }
 EOF
+    
+    SSL_TYPE="Self-Signed (10-year validity)"
+    CERT_PATH="/etc/ssl/certs/router.crt"
+fi
 
 check_success "nginx configuration created"
 
 # Create web status page
-cat > /var/www/html/index.html <<'EOF'
+cat > /var/www/html/index.html <<EOF
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -422,6 +525,7 @@ cat > /var/www/html/index.html <<'EOF'
         ul li:before { content: "✓"; position: absolute; left: 0; color: #27ae60; font-weight: bold; }
         .footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #ecf0f1; text-align: center; color: #7f8c8d; }
         .badge { background: #27ae60; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; }
+        .ssl-badge { background: #3498db; color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -430,7 +534,7 @@ cat > /var/www/html/index.html <<'EOF'
         <p class="subtitle">pfSense Replacement - Cybersecurity Lab Environment</p>
         
         <div class="status">
-            <h2>✅ Router Status: <span class="badge">ONLINE</span></h2>
+            <h2>✅ Router Status: <span class="badge">ONLINE</span> | SSL: <span class="ssl-badge">${SSL_TYPE}</span></h2>
             <p>All services operational and routing traffic between WAN, LAN, and OPT1 networks.</p>
         </div>
 
@@ -449,7 +553,7 @@ cat > /var/www/html/index.html <<'EOF'
                     <tr>
                         <td><strong>ens5 (WAN)</strong></td>
                         <td>10.0.1.0/24</td>
-                        <td>DHCP</td>
+                        <td>${PUBLIC_IP}</td>
                         <td>Internet Gateway</td>
                     </tr>
                     <tr>
@@ -476,22 +580,22 @@ cat > /var/www/html/index.html <<'EOF'
                 <li><strong>NAT/Routing (iptables)</strong> - Internet access for internal networks</li>
                 <li><strong>Firewall (iptables)</strong> - Stateful packet filtering, admin-only WAN access</li>
                 <li><strong>Snort IDS</strong> - Intrusion detection monitoring WAN interface</li>
-                <li><strong>HTTPS Management (nginx)</strong> - Secure web interface on port 443</li>
+                <li><strong>HTTPS Management (nginx)</strong> - ${SSL_TYPE}</li>
             </ul>
         </div>
 
         <div class="info-box">
-            <h2>🔐 Access Information</h2>
-            <p><strong>SSH Access:</strong> <code>ssh -i lab-key.pem ubuntu@&lt;public-ip&gt;</code></p>
-            <p><strong>Web Interface:</strong> <code>https://&lt;public-ip&gt;</code></p>
-            <p><strong>Check Status:</strong> <code>router-status</code> (from SSH)</p>
-            <p><strong>View Logs:</strong> <code>tail -f /var/log/router-setup.log</code></p>
+            <h2>🔐 SSL Certificate Information</h2>
+            <p><strong>Type:</strong> ${SSL_TYPE}</p>
+            <p><strong>Certificate Path:</strong> <code>${CERT_PATH}</code></p>
+            $([ -n "${domain_name}" ] && echo "<p><strong>Domain:</strong> ${domain_name}</p>" || echo "<p><strong>Note:</strong> Browser will show security warning for self-signed certificate</p>")
         </div>
 
         <div class="info-box">
-            <h2>📊 DHCP Lease Information</h2>
-            <p>View active DHCP leases: <code>cat /var/lib/misc/dnsmasq.leases</code></p>
-            <p>Expected devices: Kali (10.0.2.100), Ubuntu (10.0.3.100)</p>
+            <h2>🔐 Access Information</h2>
+            <p><strong>SSH Access:</strong> <code>ssh -i lab-key.pem ubuntu@${PUBLIC_IP}</code></p>
+            <p><strong>Web Interface:</strong> <code>https://${domain_name:-${PUBLIC_IP}}</code></p>
+            <p><strong>Check Status:</strong> <code>router-status</code> (from SSH)</p>
         </div>
 
         <div class="footer">
@@ -505,12 +609,10 @@ EOF
 
 check_success "Web status page created"
 
-# Enable and start nginx
 systemctl enable nginx
 systemctl restart nginx
 check_success "nginx web server started"
 
-# Verify nginx is running
 if systemctl is-active --quiet nginx; then
     echo "✅ nginx service is active"
 else
@@ -524,7 +626,6 @@ fi
 # ============================================================
 log_step "[8/8] Creating management tools and finalizing setup"
 
-# Create router status command
 cat > /usr/local/bin/router-status <<'EOF'
 #!/bin/bash
 # Ubuntu Router Status Check
@@ -564,6 +665,19 @@ echo "────────────────────────�
 printf "%-15s %s\n" "dnsmasq:" "$(systemctl is-active dnsmasq 2>/dev/null || echo 'inactive')"
 printf "%-15s %s\n" "snort:" "$(systemctl is-active snort 2>/dev/null || echo 'inactive')"
 printf "%-15s %s\n" "nginx:" "$(systemctl is-active nginx 2>/dev/null || echo 'inactive')"
+printf "%-15s %s\n" "certbot:" "$(systemctl is-active certbot.timer 2>/dev/null || echo 'inactive')"
+echo ""
+
+echo "🔐 SSL CERTIFICATE STATUS:"
+echo "────────────────────────────────────────────────────────────────"
+if [ -d "/etc/letsencrypt/live/${domain_name}" ]; then
+    echo "Type: Let's Encrypt (Auto-renewing)"
+    echo "Domain: ${domain_name}"
+    certbot certificates 2>/dev/null | grep -A 3 "Certificate Name"
+else
+    echo "Type: Self-Signed (10-year validity)"
+    echo "Path: /etc/ssl/certs/router.crt"
+fi
 echo ""
 
 echo "📊 SYSTEM RESOURCES:"
@@ -579,24 +693,25 @@ EOF
 chmod +x /usr/local/bin/router-status
 check_success "router-status command created"
 
-# Create convenient alias for ubuntu user
 echo "alias router-status='/usr/local/bin/router-status'" >> /home/ubuntu/.bashrc
 echo "alias status='router-status'" >> /home/ubuntu/.bashrc
 
-# Create status JSON for monitoring
 cat > /var/www/html/status.json <<EOF
 {
   "service": "Ubuntu Router",
   "status": "operational",
   "version": "1.0",
   "deployment_time": "$(date -Iseconds)",
+  "ssl_type": "${SSL_TYPE}",
+  "domain": "${domain_name:-none}",
   "features": {
     "dhcp": "enabled",
     "dns": "enabled",
     "nat": "enabled",
     "firewall": "enabled",
     "ids": "enabled",
-    "web_management": "enabled"
+    "web_management": "enabled",
+    "ssl_auto_renewal": "$([ -n '${domain_name}' ] && echo 'enabled' || echo 'disabled')"
   },
   "interfaces": {
     "wan": "ens5",
@@ -612,7 +727,6 @@ EOF
 
 check_success "Status JSON created"
 
-# Final verification
 log_step "Final Service Verification"
 echo ""
 echo "Service Status Summary:"
@@ -620,6 +734,9 @@ echo "────────────────────────�
 systemctl is-active --quiet dnsmasq && echo "✅ dnsmasq: RUNNING" || echo "❌ dnsmasq: FAILED"
 systemctl is-active --quiet nginx && echo "✅ nginx: RUNNING" || echo "❌ nginx: FAILED"
 systemctl is-active --quiet snort && echo "✅ snort: RUNNING" || echo "⚠️  snort: May need configuration"
+if [ -n "${domain_name}" ]; then
+    systemctl is-active --quiet certbot.timer && echo "✅ certbot: RUNNING (auto-renewal active)" || echo "⚠️  certbot: Not active"
+fi
 echo ""
 
 # ============================================================
@@ -639,19 +756,28 @@ echo "   • OPT1: 10.0.3.100-200 (Ubuntu)"
 echo "✅ DNS Resolver: Active (cyberlab.local, DNSSEC enabled)"
 echo "✅ Firewall: Active (iptables with NAT)"
 echo "✅ Snort IDS: Configured (monitoring WAN)"
-echo "✅ Web Management: Active (HTTPS on port 443)"
+echo "✅ Web Management: Active (HTTPS - ${SSL_TYPE})"
+if [ -n "${domain_name}" ]; then
+    echo "✅ SSL Certificate: Let's Encrypt (${domain_name})"
+    echo "✅ Auto-Renewal: Enabled (certbot checks twice daily)"
+else
+    echo "⚠️  SSL Certificate: Self-Signed (browser warnings expected)"
+fi
 echo ""
 echo "Quick Commands:"
 echo "───────────────────────────────────────────────────────────────"
 echo "  router-status      - Display router status"
 echo "  journalctl -u dnsmasq -f  - Follow DHCP/DNS logs"
 echo "  tail -f /var/log/snort/alert  - Monitor IDS alerts"
-echo "  iptables -L -n -v  - View firewall rules"
+if [ -n "${domain_name}" ]; then
+    echo "  certbot renew --dry-run  - Test certificate renewal"
+    echo "  certbot certificates  - Show certificate details"
+fi
 echo ""
 echo "Web Interface:"
 echo "───────────────────────────────────────────────────────────────"
-echo "  https://<public-ip>        - Status dashboard"
-echo "  https://<public-ip>/status - JSON status endpoint"
+echo "  https://${domain_name:-${PUBLIC_IP}}        - Status dashboard"
+echo "  https://${domain_name:-${PUBLIC_IP}}/status - JSON status endpoint"
 echo ""
 echo "Setup completed at: $(date)"
 echo "Log file: ${LOG_FILE}"

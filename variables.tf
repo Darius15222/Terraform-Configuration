@@ -49,23 +49,18 @@ variable "environment" {
   default = "Dev"
 }
 
-variable "router_ami_ids" {
-  type = map(string)
-  default = {
-    eu-central-1 = "ami-0084a47cc718c111a"
-  }
+# ============================================================
+# SSL CERTIFICATE CONFIGURATION
+# ============================================================
+
+variable "domain_name" {
+  description = "Domain name for SSL certificate (e.g., cyberlab-sibiu.duckdns.org). Leave empty to use self-signed certificate."
+  type        = string
+  default     = ""
 }
 
-variable "kali_ami_ids" {
-  type = map(string)
-  default = {
-    eu-central-1 = "ami-00643799044d656b7"
-  }
-}
-
-variable "ubuntu_ami_ids" {
-  type = map(string)
-  default = {
-    eu-central-1 = "ami-0dc7b24ad83b362b9"
-  }
+variable "ssl_email" {
+  description = "Email for Let's Encrypt SSL certificate notifications"
+  type        = string
+  default     = ""
 }

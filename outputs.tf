@@ -5,7 +5,30 @@ output "router_public_ip" {
 
 output "router_web_interface" {
   description = "URL to access router web interface"
-  value       = "https://${aws_eip.wan_eip.public_ip}"
+  value       = var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_eip.wan_eip.public_ip}"
+}
+
+output "ssl_certificate_info" {
+  description = "SSL certificate information"
+  value = {
+    type         = var.domain_name != "" ? "Let's Encrypt (Auto-renewing)" : "Self-Signed"
+    domain       = var.domain_name != "" ? var.domain_name : "None (using IP)"
+    access_url   = var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_eip.wan_eip.public_ip}"
+    auto_renewal = var.domain_name != "" ? "Enabled (certbot checks twice daily)" : "N/A"
+    note         = var.domain_name != "" ? "No browser warnings - Real SSL certificate" : "Browser will show security warning (expected for self-signed)"
+  }
+}
+
+output "ami_information" {
+  description = "AMI IDs used for deployment (dynamically fetched latest versions)"
+  value = {
+    router_ami      = data.aws_ami.ubuntu_router.id
+    router_ami_name = data.aws_ami.ubuntu_router.name
+    kali_ami        = data.aws_ami.kali.id
+    kali_ami_name   = data.aws_ami.kali.name
+    ubuntu_ami      = data.aws_ami.ubuntu_server.id
+    ubuntu_ami_name = data.aws_ami.ubuntu_server.name
+  }
 }
 
 output "ssh_key_path" {
@@ -64,6 +87,7 @@ output "network_architecture" {
   └─────────────────────────────┬────────────────────────────────┘
                                 │
                                 │ Public IP: ${aws_eip.wan_eip.public_ip}
+                                │ ${var.domain_name != "" ? "Domain: ${var.domain_name}" : ""}
                                 │
                   ┌─────────────▼─────────────┐
                   │   Ubuntu Router           │
@@ -74,6 +98,7 @@ output "network_architecture" {
                   │   - NAT (iptables)        │
                   │   - Firewall (iptables)   │
                   │   - Snort IDS             │
+                  │   - ${var.domain_name != "" ? "Let's Encrypt SSL" : "Self-Signed SSL"}    │
                   └───────────┬───────────────┘
                               │
               ┌───────────────┴───────────────┐
@@ -99,9 +124,10 @@ output "network_architecture" {
   
   ═══════════════════════════════════════════════════════════════
   Security Groups:
-  • WAN: ${var.admin_cidr} → Router (SSH/HTTP only)
+  • WAN: ${var.admin_cidr} → Router (SSH/HTTPS${var.domain_name != "" ? "/HTTP*" : ""})
+  ${var.domain_name != "" ? "  *HTTP only for Let's Encrypt certificate validation" : ""}
   • Internal: All VPC traffic allowed between instances
-  • Ubuntu: Port 3000 (JuiceShop) explicitly allowed from Kali
+  • Ubuntu: Port 3000, SSH, ICMP explicitly allowed
   • Egress: Unrestricted (required for lab functionality)
   ═══════════════════════════════════════════════════════════════
   EOT
@@ -120,6 +146,8 @@ output "deployment_summary" {
     ubuntu_ip         = local.ubuntu_ip
     juiceshop_port    = 3000
     cyberchef_port    = 8000
+    ssl_type          = var.domain_name != "" ? "Let's Encrypt" : "Self-Signed"
+    domain            = var.domain_name != "" ? var.domain_name : "None"
     project           = var.project_name
     environment       = var.environment
   }
@@ -136,12 +164,14 @@ output "quick_start" {
   🚀 ROUTER ACCESS
   ════════════════════════════════════════════════════════════════
   SSH: ssh -i ${local_file.ssh_key.filename} ubuntu@${aws_eip.wan_eip.public_ip}
-  Web: https://${aws_eip.wan_eip.public_ip}
+  Web: ${var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_eip.wan_eip.public_ip}"}
+  
+  ${var.domain_name != "" ? "✅ Let's Encrypt SSL - No browser warnings!" : "⚠️  Self-Signed SSL - Browser will show security warning (expected)"}
   
   After SSH, check status:
     router-status
   
-  📋 WHAT'S CONFIGURED (Automatic from pfSense XML)
+  📋 WHAT'S CONFIGURED (Automatic)
   ════════════════════════════════════════════════════════════════
   ✅ DHCP Server:
      - LAN:  10.0.2.100-200 (for Kali)
@@ -154,15 +184,19 @@ output "quick_start" {
   
   ✅ Firewall:
      - WAN: SSH/HTTPS from ${var.admin_cidr}
+     ${var.domain_name != "" ? "- HTTP (80): Let's Encrypt validation only" : ""}
      - LAN/OPT: Full access
   
   ✅ NAT: Internet access via WAN
   
   ✅ Snort IDS: Monitoring WAN interface
   
+  ✅ SSL Certificate: ${var.domain_name != "" ? "Let's Encrypt (Auto-renewing)" : "Self-Signed (10-year)"}
+  
+  ${var.domain_name != "" ? "🔐 SSL CERTIFICATE MANAGEMENT\n════════════════════════════════════════════════════════════════\n  certbot certificates       - Show certificate details\n  certbot renew --dry-run    - Test renewal\n  systemctl status certbot.timer - Check auto-renewal status\n" : ""}
   🔍 VERIFY SETUP
   ════════════════════════════════════════════════════════════════
-  1. Router web interface: https://${aws_eip.wan_eip.public_ip}
+  1. Router web interface: ${var.domain_name != "" ? "https://${var.domain_name}" : "https://${aws_eip.wan_eip.public_ip}"}
   2. SSH to router: See command above
   3. Check DHCP leases: cat /var/lib/misc/dnsmasq.leases
   4. Test from Kali: ping 10.0.3.100
@@ -172,6 +206,7 @@ output "quick_start" {
   ✅ Using AWS credits (not marketplace charges)
   ✅ Ubuntu 24.04 LTS (free AMI)
   ✅ Only paying for EC2 compute
+  ✅ Dynamic AMI selection (always latest versions)
   
   📚 NEXT STEPS
   ════════════════════════════════════════════════════════════════

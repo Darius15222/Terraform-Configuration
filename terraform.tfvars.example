@@ -11,8 +11,23 @@
 # Format: xxx.xxx.xxx.xxx/32 (the /32 means "only this single IP")
 admin_cidr = "1.2.3.4/32"
 
-# IMPORTANT: Ubuntu 24.04 LTS AMI is already configured in variables.tf
-# No need to change AMI IDs - they use standard AWS AMIs (covered by credits)
+# ============================================================
+# SSL CERTIFICATE CONFIGURATION (Optional - for Let's Encrypt)
+# ============================================================
+# If you have a domain (e.g., Duck DNS), uncomment and configure:
+domain_name = "cyberlab-sibiu.duckdns.org"
+ssl_email   = "your.email@example.com"
+
+# IMPORTANT: 
+# - Domain must have A record pointing to router's Elastic IP
+# - For Duck DNS: Update your subdomain IP at https://www.duckdns.org
+# - Let's Encrypt needs port 80 accessible (HTTP-01 challenge)
+# - Certificates auto-renew every 60 days
+# - Leave blank to use self-signed certificate
+# ============================================================
+
+# IMPORTANT: AMI IDs are now dynamically fetched (always get latest)
+# No need to specify AMI IDs - Terraform will find the latest Ubuntu/Kali images
 
 # OPTIONAL: Override default values below as needed
 # aws_region = "eu-central-1"
@@ -32,7 +47,3 @@ admin_cidr = "1.2.3.4/32"
 
 # project_name = "CyberLab"
 # environment  = "Dev"
-
-# NOTE: Router AMI ID already set in variables.tf
-# Using Ubuntu 24.04 LTS (ami-0084a47cc718c111a)
-# This is a FREE AWS AMI that uses your credits!

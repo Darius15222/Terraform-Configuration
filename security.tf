@@ -3,6 +3,7 @@
 # ============================================================
 # Controls access to Ubuntu Router from the internet
 # - SSH (22): Admin access from specified IP
+# - HTTP (80): Let's Encrypt certificate validation (when domain configured)
 # - HTTPS (443): Web interface access from specified IP
 resource "aws_security_group" "pfsense_wan_sg" {
   name        = "router-wan-sg"
@@ -16,6 +17,18 @@ resource "aws_security_group" "pfsense_wan_sg" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = [var.admin_cidr]
+  }
+
+  # HTTP for Let's Encrypt certificate validation (only if domain configured)
+  dynamic "ingress" {
+    for_each = var.domain_name != "" ? [1] : []
+    content {
+      description = "HTTP for Let's Encrypt certificate validation"
+      from_port   = 80
+      to_port     = 80
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
   # HTTPS access to web interface from admin IP only
@@ -117,13 +130,13 @@ resource "aws_security_group" "kali_sg" {
 # Controls access to Ubuntu server (vulnerable target)
 # - JuiceShop on port 3000 accessible from Kali subnet
 # - SSH accessible from VPC for management
-# - All traffic from VPC allowed for flexibility
+# - ICMP for connectivity testing
 resource "aws_security_group" "ubuntu_sg" {
   name        = "ubuntu-sg"
   description = "Security group for Ubuntu vulnerable server"
   vpc_id      = aws_vpc.main.id
 
-  # Allow JuiceShop access from Kali subnet (explicit rule for clarity)
+  # Allow JuiceShop access from Kali subnet
   ingress {
     description = "JuiceShop from Kali subnet"
     from_port   = 3000
@@ -141,16 +154,16 @@ resource "aws_security_group" "ubuntu_sg" {
     cidr_blocks = [var.vpc_cidr]
   }
 
-  # Allow all traffic from VPC (for other services and flexibility)
+  # Allow ICMP (ping) from VPC for connectivity testing
   ingress {
-    description = "All traffic from VPC"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    description = "ICMP from VPC"
+    from_port   = -1
+    to_port     = -1
+    protocol    = "icmp"
     cidr_blocks = [var.vpc_cidr]
   }
 
-  # Allow all outbound (needs to reach internet via Router for Docker pulls)
+  # Allow all outbound (needs internet via Router for Docker pulls)
   egress {
     description = "Allow all outbound"
     from_port   = 0
