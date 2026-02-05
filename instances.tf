@@ -30,6 +30,8 @@ resource "aws_instance" "router" {
     admin_cidr = var.admin_cidr
   })
   
+  user_data_replace_on_change = true
+  
   tags = merge(local.common_tags, {
     Name = "ubuntu-router"
     Role = "Gateway/Firewall"

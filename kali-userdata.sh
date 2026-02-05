@@ -17,6 +17,32 @@ echo "Kali Linux Setup Started"
 echo "Timestamp: $(date)"
 echo "========================================"
 
+# ============================================================
+# WAIT FOR ROUTER GATEWAY TO BE READY
+# ============================================================
+echo "[0/4] Waiting for router gateway (10.0.2.10)..."
+ROUTER_GATEWAY="10.0.2.10"
+MAX_WAIT=300  # 5 minutes
+ELAPSED=0
+
+while ! ping -c 1 -W 1 ${ROUTER_GATEWAY} &>/dev/null; do
+    echo "Router gateway not ready yet... waiting (${ELAPSED}s/${MAX_WAIT}s)"
+    sleep 5
+    ELAPSED=$((ELAPSED + 5))
+    
+    if [ ${ELAPSED} -ge ${MAX_WAIT} ]; then
+        echo "ERROR: Router gateway did not become available after ${MAX_WAIT} seconds"
+        echo "This may indicate a network configuration issue"
+        exit 1
+    fi
+done
+
+echo "✅ Router gateway is reachable!"
+
+# Verify default route through router
+echo "Verifying routing configuration..."
+ip route show
+
 # Update system packages
 echo "[1/4] Updating system packages..."
 export DEBIAN_FRONTEND=noninteractive
