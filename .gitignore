@@ -33,3 +33,6 @@ crash.*.log
 
 # Backup files
 *.backup
+
+# Security audit reports (generated)
+terraform-security-audit.txt
