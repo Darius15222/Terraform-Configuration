@@ -3,7 +3,7 @@
 # ============================================================
 # Controls access to Ubuntu Router from the internet
 # - SSH (22): Admin access from specified IP
-# - HTTP (80): Let's Encrypt certificate validation (when domain configured)
+# - HTTP (80): Lets Encrypt certificate validation (when domain configured)
 # - HTTPS (443): Web interface access from specified IP
 resource "aws_security_group" "pfsense_wan_sg" {
   name        = "router-wan-sg"
@@ -19,11 +19,12 @@ resource "aws_security_group" "pfsense_wan_sg" {
     cidr_blocks = [var.admin_cidr]
   }
 
-  # HTTP for Let's Encrypt certificate validation (only if domain configured)
+  # HTTP for Lets Encrypt certificate validation (only if domain configured)
+  # [FIX] Removed apostrophe from "Let's" to fix AWS validation error
   dynamic "ingress" {
     for_each = var.domain_name != "" ? [1] : []
     content {
-      description = "HTTP for Let's Encrypt certificate validation"
+      description = "HTTP for Lets Encrypt certificate validation"
       from_port   = 80
       to_port     = 80
       protocol    = "tcp"

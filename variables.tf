@@ -5,9 +5,8 @@ variable "aws_region" {
 }
 
 variable "admin_cidr" {
-  description = "Admin IP CIDR"
+  description = "Admin IP CIDR (REQUIRED - get from https://checkip.amazonaws.com)"
   type        = string
-  default     = "1.2.3.4/32"
 }
 
 variable "vpc_cidr" {
